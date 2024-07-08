@@ -8,7 +8,12 @@
     <% for(let listing of allListings){ %>
       <a href="/listing/<%= listing._id %>" class="listing-link">
     <div class="card">
-      <img src="<%= listing.image.url %>" class="card-img-top" alt="listing_image"  style="height: 20rem"/>
+      <% if (listing.image && listing.image.url) { %>
+        <img src="<%= listing.image.url %>" class="card-img-top" alt="listing_image"  style="height: 20rem"/>
+      <% } else { %>
+        <!-- display a default image or a placeholder -->
+        <img src="https://example.com/default-image.jpg" class="card-img-top" alt="listing_image"  style="height: 20rem"/>
+      <% } %>
       
         <div class="card-img-overlay"></div>
       
