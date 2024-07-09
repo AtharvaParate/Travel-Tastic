@@ -9,11 +9,17 @@ const listingSchema = new Schema({
   description: String,
   image: {
     url: String,
-    filename: String, 
+    filename: String,
   },
   price: Number,
   location: String,
   country: String,
+  reviews: [
+    {
+      type: Schema.Types.ObjectId,
+      ref: "Review",
+    },
+  ],
 });
 
 // listingSchema.post("findOneAndDelete", async (listing) => {
