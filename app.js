@@ -1,7 +1,7 @@
 const express = require("express");
 const app = express();
 const mongoose = require("mongoose");
-const Listing = require("./models/listing");
+const Listing = require("./models/listing.js");
 const path = require("path");
 const methodOverride = require("method-override");
 const ejsMate = require("ejs-mate");
@@ -28,7 +28,7 @@ app.get("/", (req, res) => {
   res.send("Hi, I am root");
 });
 
-const validateLisiting = (req, res, next) => {
+const validateListing = (req, res, next) => {
   let { error } = listingSchema.validate(req.body);
   // console.log(result);
   if (error) {
@@ -44,7 +44,7 @@ const validateLisiting = (req, res, next) => {
 };
 
 const validateReview = (req, res, next) => {
-  let { error } = listingSchema.validate(req.body);
+  let { error } = reviewSchema.validate(req.body);
   // console.log(result);
   if (error) {
     let errMsg = error.details
@@ -89,7 +89,7 @@ app.get(
   "/listing/:id",
   wrapAsync(async (req, res) => {
     let { id } = req.params;
-    const listing = await Listing.findById(id);
+    const listing = await Listing.findById(id).populate("reviews");
     res.render("listings/show.ejs", { listing });
   })
 );
@@ -97,7 +97,7 @@ app.get(
 //Create Route
 app.post(
   "/listings",
-  validateLisiting,
+  validateListing,
   wrapAsync(async (req, res, next) => {
     const newListing = new Listing(req.body.listing);
     console.log(newListing);
@@ -133,7 +133,7 @@ app.get(
 // Update Route
 app.put(
   "/listings/:id",
-  validateLisiting,
+  validateListing,
   wrapAsync(async (req, res) => {
     let { id } = req.params;
     await Listing.findByIdAndUpdate(id, { ...req.body.listing });
