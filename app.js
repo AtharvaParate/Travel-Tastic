@@ -153,7 +153,7 @@ app.delete(
 );
 
 //Reviews
-//Post route
+//Post Review route
 app.post(
   "/listing/:id/reviews",
   validateReview,
@@ -169,6 +169,18 @@ app.post(
     // console.log("new review saved");
     // res.send("new review saved");
     res.redirect(`/listing/${listing._id}`);
+  })
+);
+
+//Delete Review Route
+app.delete(
+  "/listing/:id/reviews/:reviewId",
+  wrapAsync(async (req, res) => {
+    let { id, reviewId } = req.params;
+    await Listing.findByIdAndUpdate(id, { $pull: { reviews: reviewId } });
+    await Review.findByIdAndDelete(reviewId);
+
+    res.redirect(`/listing/${id}`);
   })
 );
 
