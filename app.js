@@ -7,8 +7,13 @@ const methodOverride = require("method-override");
 const ejsMate = require("ejs-mate");
 const wrapAsync = require("./utils/wrapAsync");
 const ExpressError = require("./utils/ExpressError");
-const { listingSchema, reviewSchema } = require("./schema.js");
-const Review = require("./models/review.js");
+const { listingSchema } = require("./schema.js");
+const reviews = require("./routes/review.js");
+const session = require("express-session");
+const flash = require("connect-flash");
+const passport = require("passport");
+const LocalStrategy = require("passport-local");
+const User = require("./models/user.js");
 
 const MONGO_URL = "mongodb://127.0.0.1:27017/travelTastic";
 
@@ -28,36 +33,6 @@ app.get("/", (req, res) => {
   res.send("Hi, I am root");
 });
 
-const validateListing = (req, res, next) => {
-  let { error } = listingSchema.validate(req.body);
-  // console.log(result);
-  if (error) {
-    let errMsg = error.details
-      .map((el) => {
-        el.message;
-      })
-      .join(",");
-    throw new ExpressError(400, errMsg);
-  } else {
-    next();
-  }
-};
-
-const validateReview = (req, res, next) => {
-  let { error } = reviewSchema.validate(req.body);
-  // console.log(result);
-  if (error) {
-    let errMsg = error.details
-      .map((el) => {
-        el.message;
-      })
-      .join(",");
-    throw new ExpressError(400, errMsg);
-  } else {
-    next();
-  }
-};
-
 app.set("view engine", "ejs");
 app.set("views", path.join(__dirname, "views"));
 app.use(express.urlencoded({ extended: true }));
@@ -65,9 +40,59 @@ app.use(methodOverride("_method"));
 app.engine("ejs", ejsMate);
 app.use(express.static(path.join(__dirname, "/public")));
 
+const validateListing = (req, res, next) => {
+  let { error } = listingSchema.validate(req.body);
+
+  if (error) {
+    let errMsg = error.details.map((el) => el.message).join(",");
+    throw new ExpressError(400, errMsg);
+  } else {
+    next();
+  }
+};
+
+const sessionOptions = {
+  secret: "mysupersecretcode",
+  resave: false,
+  saveUninitialized: true,
+  cookie: {
+    expires: Date.now() + 1000 * 60 * 60 * 24 * 7,
+    maxAge: 1000 * 60 * 60 * 24 * 7,
+    httpOnly: true,
+  },
+};
+
 app.get("/", (req, res) => {
   res.send("Hi, I am root");
 });
+
+app.use(session(sessionOptions));
+app.use(flash());
+
+app.use(passport.initialize());
+app.use(passport.session());
+passport.use(new LocalStrategy(User.authenticate()));
+passport.serializeUser(User.serializeUser());
+passport.deserializeUser(User.deserializeUser());
+
+app.use((req, res, next) => {
+  res.locals.success = req.flash("success");
+  res.locals.error = req.flash("error");
+  next();
+});
+
+app.use("/demouser", async (req, res) => {
+  let fakeUser = new User({
+    email: "student@gmail.com",
+    username: "delta-student",
+  });
+
+  let registeredUser = await User.register(fakeUser, "helloworld");
+  res.send(registeredUser);
+});
+
+// app.use("/listings", listings);
+app.use("/listing/:id/reviews", reviews);
 
 //Index Route
 app.get(
@@ -90,6 +115,10 @@ app.get(
   wrapAsync(async (req, res) => {
     let { id } = req.params;
     const listing = await Listing.findById(id).populate("reviews");
+    if (!listing) {
+      req.flash("error", "Listing Does Not Exist!");
+      res.redirect("/listings");
+    }
     res.render("listings/show.ejs", { listing });
   })
 );
@@ -97,28 +126,13 @@ app.get(
 //Create Route
 app.post(
   "/listings",
-  validateListing,
   wrapAsync(async (req, res, next) => {
     const newListing = new Listing(req.body.listing);
-    console.log(newListing);
     await newListing.save();
+    req.flash("success", "New Listing Created!");
     res.redirect("/listings");
   })
 );
-
-// app.get("/testListing", async (req, res) => {
-//   let sampleListing = new Listing({
-//     title: "My New Villa",
-//     description: "By the beach",
-//     price: 1200,
-//     location: "Calangute, Goa",
-//     country: "India",
-//   });
-
-//   await sampleListing.save();
-//   console.log("sample was saved");
-//   res.send("Successful");
-// });
 
 //Edit Route
 app.get(
@@ -126,6 +140,10 @@ app.get(
   wrapAsync(async (req, res) => {
     let { id } = req.params;
     const listing = await Listing.findById(id);
+    if (!listing) {
+      req.flash("error", "Listing Does Not Exist!");
+      res.redirect("/listings");
+    }
     res.render("listings/edit.ejs", { listing });
   })
 );
@@ -137,6 +155,7 @@ app.put(
   wrapAsync(async (req, res) => {
     let { id } = req.params;
     await Listing.findByIdAndUpdate(id, { ...req.body.listing });
+    req.flash("success", " Listing Updated!");
     res.redirect(`/listing/${id}`);
   })
 );
@@ -148,39 +167,8 @@ app.delete(
     let { id } = req.params;
     let deletedListing = await Listing.findByIdAndDelete(id);
     console.log(deletedListing);
+    req.flash("success", "Listing Deleted!");
     res.redirect("/listings");
-  })
-);
-
-//Reviews
-//Post Review route
-app.post(
-  "/listing/:id/reviews",
-  validateReview,
-  wrapAsync(async (req, res) => {
-    let listing = await Listing.findById(req.params.id);
-    let newReview = new Review(req.body.review);
-
-    listing.reviews.push(newReview);
-
-    await newReview.save();
-    await listing.save();
-
-    // console.log("new review saved");
-    // res.send("new review saved");
-    res.redirect(`/listing/${listing._id}`);
-  })
-);
-
-//Delete Review Route
-app.delete(
-  "/listing/:id/reviews/:reviewId",
-  wrapAsync(async (req, res) => {
-    let { id, reviewId } = req.params;
-    await Listing.findByIdAndUpdate(id, { $pull: { reviews: reviewId } });
-    await Review.findByIdAndDelete(reviewId);
-
-    res.redirect(`/listing/${id}`);
   })
 );
 
