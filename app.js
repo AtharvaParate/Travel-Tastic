@@ -8,12 +8,14 @@ const ejsMate = require("ejs-mate");
 const wrapAsync = require("./utils/wrapAsync");
 const ExpressError = require("./utils/ExpressError");
 const { listingSchema } = require("./schema.js");
-const reviews = require("./routes/review.js");
 const session = require("express-session");
 const flash = require("connect-flash");
 const passport = require("passport");
 const LocalStrategy = require("passport-local");
 const User = require("./models/user.js");
+
+const reviewRouter = require("./routes/review.js");
+const userRouter = require("./routes/user.js");
 
 const MONGO_URL = "mongodb://127.0.0.1:27017/travelTastic";
 
@@ -92,7 +94,8 @@ app.use("/demouser", async (req, res) => {
 });
 
 // app.use("/listings", listings);
-app.use("/listing/:id/reviews", reviews);
+app.use("/listing/:id/reviews", reviewRouter);
+app.use("/", userRouter);
 
 //Index Route
 app.get(
