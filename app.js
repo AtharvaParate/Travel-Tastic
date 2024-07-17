@@ -13,6 +13,7 @@ const flash = require("connect-flash");
 const passport = require("passport");
 const LocalStrategy = require("passport-local");
 const User = require("./models/user.js");
+const { isLoggedIn } = require("./middleware.js");
 
 const reviewRouter = require("./routes/review.js");
 const userRouter = require("./routes/user.js");
@@ -108,7 +109,7 @@ app.get(
 );
 
 // New Route
-app.get("/listing/new", (req, res) => {
+app.get("/listing/new", isLoggedIn, (req, res) => {
   res.render("listings/new.ejs");
 });
 
@@ -140,6 +141,7 @@ app.post(
 //Edit Route
 app.get(
   "/listing/:id/edit",
+  isLoggedIn,
   wrapAsync(async (req, res) => {
     let { id } = req.params;
     const listing = await Listing.findById(id);
@@ -154,6 +156,7 @@ app.get(
 // Update Route
 app.put(
   "/listings/:id",
+  isLoggedIn,
   validateListing,
   wrapAsync(async (req, res) => {
     let { id } = req.params;
@@ -166,6 +169,7 @@ app.put(
 //Delete Route
 app.delete(
   "/listings/:id",
+  isLoggedIn,
   wrapAsync(async (req, res) => {
     let { id } = req.params;
     let deletedListing = await Listing.findByIdAndDelete(id);
