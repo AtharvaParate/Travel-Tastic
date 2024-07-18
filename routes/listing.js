@@ -40,7 +40,9 @@ router.get(
   "/:id",
   wrapAsync(async (req, res) => {
     let { id } = req.params;
-    const listing = await Listing.findById(id).populate("reviews");
+    const listing = await Listing.findById(id)
+      .populate("reviews")
+      .populate("owner");
     res.render("listings/show.ejs", { listing });
   })
 );
@@ -51,6 +53,7 @@ router.post(
   validateListing,
   wrapAsync(async (req, res, next) => {
     const newListing = new Listing(req.body.listing);
+    newListing.owner = req.user._id;
     console.log(newListing);
     await newListing.save();
     res.redirect("/listings");
