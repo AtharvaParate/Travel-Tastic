@@ -1,7 +1,11 @@
+if (process.env.NODE_ENV != "production") {
+  require("dotenv").config();
+}
+// console.log(process.env.SECRET);
+
 const express = require("express");
 const app = express();
 const mongoose = require("mongoose");
-const Listing = require("./models/listing.js");
 const path = require("path");
 const methodOverride = require("method-override");
 const ejsMate = require("ejs-mate");
@@ -13,6 +17,9 @@ const passport = require("passport");
 const LocalStrategy = require("passport-local");
 const User = require("./models/user.js");
 const { isLoggedIn, isOwner, validateListing } = require("./middleware.js");
+const multer = require("multer");
+const { storage } = require("./cloudConfig.js");
+const upload = multer({ storage });
 
 const listingController = require("./controllers/listing.js");
 
@@ -79,10 +86,12 @@ app.use((req, res, next) => {
 app.use("/listing/:id/reviews", reviewRouter);
 app.use("/", userRouter);
 
-app
-  .route("/listings")
-  .get(wrapAsync(listingController.index))
-  .post(wrapAsync(listingController.createListing));
+app.route("/listings").get(wrapAsync(listingController.index)).post(
+  isLoggedIn,
+  // validateListing,
+  upload.single("listing[image]"),
+  wrapAsync(listingController.createListing)
+);
 
 // New Route
 app.get("/listing/new", isLoggedIn, listingController.renderNewForm);
