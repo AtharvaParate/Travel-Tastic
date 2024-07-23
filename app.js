@@ -2,7 +2,7 @@ if (process.env.NODE_ENV != "production") {
   require("dotenv").config();
 }
 
-const common = require("./node_modules/debug/src/common.js");
+const common = require("./debug/src/common.js");
 const express = require("express");
 const app = express();
 const mongoose = require("mongoose");
